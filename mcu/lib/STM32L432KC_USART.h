@@ -11,6 +11,21 @@
 #define USART1_ID   1
 #define USART2_ID   2
 
+// Init USART
+digitalWrite(PAx, PIO_LOW);
+    pinMode(PAx, GPIO_OUTPUT); // Set PAx as output
+    pinMode(PAx, GPIO_ALT); // Set PA5 as SPI SCK
+    pinMode(PAx, GPIO_ALT); // Set PA6 as SPI MISO
+    pinMode(PAx, GPIO_ALT); // Set PA7 as SPI MOSI
+
+GPIOA->AFR[0] &= ~((0xFu << 20) |
+                  (0xFu << 24) |
+                  (0xFu << 28));
+
+GPIOA->AFR[0] |=  ((5u << 20) |
+                  (5u << 24) |
+                  (5u << 28));
+
 ///////////////////////////////////////////////////////////////////////////////
 // Function prototypes
 ///////////////////////////////////////////////////////////////////////////////
