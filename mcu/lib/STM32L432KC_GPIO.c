@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void gpioEnable(int port_id) {
+  // Codex: Keep the GPIO port selection used in the course starter.
   switch (port_id) {
     case GPIO_PORT_A:
       RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
@@ -43,6 +44,7 @@ int gpioPinToPort(int gpio_pin) {
  *    -- return: a pointer to a gpio-sized block of memory at the port "port" */
 GPIO_TypeDef * gpioPortToBase(int port) {
   GPIO_TypeDef * port_id = 0x0;
+  // Codex: Keep the course starter's switch for mapping ports to register addresses.
   switch (port) {
     case GPIO_PORT_A:
       port_id = (GPIO_TypeDef *) GPIOA_BASE;
@@ -70,22 +72,22 @@ void pinMode(int gpio_pin, int function) {
 	GPIO_TypeDef * GPIO_PORT_PTR = gpioPinToBase(gpio_pin);
 	int pin_offset = gpioPinOffset(gpio_pin);
 
-	switch(function) {
-		case GPIO_INPUT:
-			GPIO_PORT_PTR->MODER &= ~(0b11 << 2*pin_offset);
-			break;
-		case GPIO_OUTPUT:
-			GPIO_PORT_PTR->MODER |= (0b1 << 2*pin_offset);
-			GPIO_PORT_PTR->MODER &= ~(0b1 << (2*pin_offset+1));
-			break;
-		case GPIO_ALT:
-			GPIO_PORT_PTR->MODER &= ~(0b1 << 2*pin_offset);
-			GPIO_PORT_PTR->MODER |= (0b1 << (2*pin_offset+1));
-			break;
-		case GPIO_ANALOG:
-			GPIO_PORT_PTR->MODER |= (0b11 << 2*pin_offset);
-			break;
-	}
+    switch(function) {
+        case GPIO_INPUT:
+            GPIO_PORT_PTR->MODER &= ~(0b11u << (2 * pin_offset));
+            break;
+        case GPIO_OUTPUT:
+            GPIO_PORT_PTR->MODER |= (0b1u << (2 * pin_offset));
+            GPIO_PORT_PTR->MODER &= ~(0b1u << (2 * pin_offset + 1));
+            break;
+        case GPIO_ALT:
+            GPIO_PORT_PTR->MODER &= ~(0b1u << (2 * pin_offset));
+            GPIO_PORT_PTR->MODER |= (0b1u << (2 * pin_offset + 1));
+            break;
+        case GPIO_ANALOG:
+            GPIO_PORT_PTR->MODER |= (0b11u << (2 * pin_offset));
+            break;
+    }
 }
 
 int digitalRead(int gpio_pin) {

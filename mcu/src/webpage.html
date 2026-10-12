@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>E155 Lab 6</title>
+</head>
+<body>
+  <!-- Inserts reading -->
+  <h1>E155 Web Server</h1>
+  <p>Control the board's LED and view the room temperature.</p>
+  <h2>Temperature</h2>
+  <p>Temperature: {{TEMPERATURE_C}} &deg;C</p>
+  <h2>LED Status</h2>
+  <p>LED is {{LED_STATUS}}!</p>
+  <h2>Controls</h2>
+  <!-- GET Route + ESP program actions -->
+  <form action="/ledon" method="get">
+    <input type="submit" value="Turn the LED on">
+  </form>
+  <form action="/ledoff" method="get">
+    <input type="submit" value="Turn the LED off">
+  </form>
+  <form action="/" method="get">
+    <input type="submit" value="Refresh temperature">
+  </form>
+</body>
+</html>

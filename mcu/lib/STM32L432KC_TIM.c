@@ -6,7 +6,7 @@
 
 void initTIM(TIM_TypeDef * TIMx){
   // Set prescaler to give 1 ms time base
-  uint32_t psc_div = (uint32_t) ((SystemCoreClock/1e3));
+  uint32_t psc_div = SystemCoreClock / 10000;
 
   // Set prescaler division factor
   TIMx->PSC = (psc_div - 1);
@@ -17,10 +17,12 @@ void initTIM(TIM_TypeDef * TIMx){
 }
 
 void delay_millis(TIM_TypeDef * TIMx, uint32_t ms){
-  TIMx->ARR = ms;// Set timer max count
-  TIMx->EGR |= 1;     // Force update
-  TIMx->SR &= ~(0x1); // Clear UIF
-  TIMx->CNT = 0;      // Reset count
+  for (uint32_t i = 0; i < ms; i++) {
+    TIMx->ARR = 9;// Set timer max count
+    TIMx->EGR |= 1;     // Force update
+    TIMx->SR &= ~(0x1); // Clear UIF
+    TIMx->CNT = 0;      // Reset count
 
-  while(!(TIMx->SR & 1)); // Wait for UIF to go high
+    while(!(TIMx->SR & 1)); // Wait for UIF to go high
+  }
 }

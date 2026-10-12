@@ -10,10 +10,12 @@ void configurePLL() {
    // M:, N:, P:
    // Use HSI as PLLSRC
 
-   RCC->CR &= ~_FLD2VAL(RCC_CR_PLLON, RCC->CR); // Turn off PLL
-   while (_FLD2VAL(RCC_CR_PLLRDY, 1) != 0); // Wait till PLL is unlocked (e.g., off)
+   RCC->CR &= ~RCC_CR_PLLON; // Turn off PLL
+   while (RCC->CR & RCC_CR_PLLRDY); // Wait till PLL is unlocked (e.g., off)
 
    // Load configuration
+   RCC->PLLCFGR &= ~(RCC_PLLCFGR_PLLSRC_Msk | RCC_PLLCFGR_PLLM_Msk |
+                       RCC_PLLCFGR_PLLN_Msk | RCC_PLLCFGR_PLLR_Msk);
    RCC->PLLCFGR |= _VAL2FLD(RCC_PLLCFGR_PLLSRC, RCC_PLLCFGR_PLLSRC_MSI);
    RCC->PLLCFGR |= _VAL2FLD(RCC_PLLCFGR_PLLM, 0b001); // M = 2
    RCC->PLLCFGR |= _VAL2FLD(RCC_PLLCFGR_PLLN, 80);    // N = 80

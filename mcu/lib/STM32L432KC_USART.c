@@ -26,21 +26,37 @@ USART_TypeDef * initUSART(int USART_ID, int baud_rate) {
     RCC->CR |= RCC_CR_HSION;  // Turn on HSI 16 MHz clock
 
     USART_TypeDef * USART = id2Port(USART_ID); // Get pointer to USART
+    // Positive Baud Rate
+    if (USART == 0 || baud_rate <= 0) { return 0; }
+    // Wait for HSI16
+    while (!(RCC->CR & RCC_CR_HSIRDY));
 
     switch(USART_ID){
         case USART1_ID :
             RCC->APB2ENR |= RCC_APB2ENR_USART1EN; // Set USART1EN
+            (void)RCC->APB2ENR;
+            // Disable UART
+            USART->CR1 &= ~USART_CR1_UE;
+            // Clear field
+            RCC->CCIPR &= ~RCC_CCIPR_USART1SEL_Msk;
             RCC->CCIPR |= (0b10 << RCC_CCIPR_USART1SEL_Pos); // Set HSI16 (16 MHz) as USART clock source
 
+            // Clear fields before AF7
+            GPIOA->AFR[1] &= ~((0xFu << GPIO_AFRH_AFSEL9_Pos) |
+                              (0xFu << GPIO_AFRH_AFSEL10_Pos));
             GPIOA->AFR[1] |= (0b111 << GPIO_AFRH_AFSEL9_Pos) | (0b111 << GPIO_AFRH_AFSEL10_Pos);
 
             // Configure pin modes as ALT function
             pinMode(PA9, GPIO_ALT); // TX
             pinMode(PA10, GPIO_ALT); // RX
-
             break;
         case USART2_ID :
             RCC->APB1ENR1 |= RCC_APB1ENR1_USART2EN; // Set USART2EN
+            (void)RCC->APB1ENR1;
+            // Disable UART
+            USART->CR1 &= ~USART_CR1_UE;
+            // Clear field 
+            RCC->CCIPR &= ~RCC_CCIPR_USART2SEL_Msk;
             RCC->CCIPR |= (0b10 << RCC_CCIPR_USART2SEL_Pos); // Set HSI16 (16 MHz) as USART clock source
 
             // Configure pin modes as ALT function
@@ -48,10 +64,18 @@ USART_TypeDef * initUSART(int USART_ID, int baud_rate) {
             pinMode(PA15, GPIO_ALT); // RX
 
             // Configure correct alternate functions
+            // Use proper AF 
+            GPIOA->AFR[0] &= ~(0xFu << GPIO_AFRL_AFSEL2_Pos);
+            GPIOA->AFR[1] &= ~(0xFu << GPIO_AFRH_AFSEL15_Pos);
             GPIOA->AFR[0] |= (0b111 << GPIO_AFRL_AFSEL2_Pos);   //AF7
             GPIOA->AFR[1] |= (0b011 << GPIO_AFRH_AFSEL15_Pos);  //AF3
             break;
     }
+
+    USART->CR1 &= ~USART_CR1_PCE;
+    USART->CR2 &= ~USART_CR2_CLKEN;
+    USART->CR3 &= ~(USART_CR3_DMAT | USART_CR3_DMAR |
+                    USART_CR3_RTSE | USART_CR3_CTSE);
 
     // Set M = 00
     USART->CR1 &= ~(USART_CR1_M0 | USART_CR1_M1);    // M=00 corresponds to 1 start bit, 8 data bits, n stop bits
@@ -59,7 +83,7 @@ USART_TypeDef * initUSART(int USART_ID, int baud_rate) {
     USART->CR2 &= ~USART_CR2_STOP;  // 0b00 corresponds to 1 stop bit
 
     // Set baud rate to 115200 (see RM 38.5.4 for details)
-    // Tx/Rx baud = f_CK/USARTDIV (since oversampling by 16)
+    // Tx/Rx baud = f_CK/USARTDIV
     // f_CK = 16 MHz (HSI)
 
     USART->BRR = (uint16_t) (HSI_FREQ / baud_rate);
@@ -71,23 +95,26 @@ USART_TypeDef * initUSART(int USART_ID, int baud_rate) {
 }
 
 void sendChar(USART_TypeDef * USART, char data){
+
     while(!(USART->ISR & USART_ISR_TXE));
-    USART->TDR = data;
+    USART->TDR = (uint8_t)data;
+    // Codex: Bit left TX pin
     while(!(USART->ISR & USART_ISR_TC));
 }
 
 void sendString(USART_TypeDef * USART, char * charArray){
 
     uint32_t i = 0;
-    do{
+    while (charArray[i] != 0) {
         sendChar(USART, charArray[i]);
         i++;
     }
-    while(charArray[i] != 0);
 }
 
 char readChar(USART_TypeDef * USART) {
-        char data = USART->RDR;
+        // Wait one byte and read
+        while (!(USART->ISR & USART_ISR_RXNE));
+        char data = (char)(uint8_t)USART->RDR;
         return data;
 }
 
