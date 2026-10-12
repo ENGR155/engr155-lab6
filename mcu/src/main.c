@@ -10,7 +10,7 @@ Date: 9/14/19
 #include <stdlib.h>
 #include <stdio.h>
 #include "main.h"
-#include "DS1722.h"
+#include "..\lib\DS1722.h"
 
 /////////////////////////////////////////////////////////////////
 // Provided Constants and Functions
@@ -26,13 +26,11 @@ char* webpageStart =
     "<title>E155 Lab 6</title>"
     "</head>"
     "<body>"
-    "<!-- Codex: The MCU fills the readings below for each web request. -->"
     "<h1>E155 Web Server</h1>"
     "<p>Control the board's LED and view the room temperature.</p>";
-// Codex: These forms provide LED on/off and temperature refresh.
+// LED on/off and temp refresh
 char* ledStr =
     "<h2>Controls</h2>"
-    "<!-- Codex: These GET routes match the ESP request messages. -->"
     "<form action=\"/ledon\" method=\"get\">"
     "<input type=\"submit\" value=\"Turn the LED on\">"
     "</form>"
@@ -42,6 +40,19 @@ char* ledStr =
     "<form action=\"/\" method=\"get\">"
     "<input type=\"submit\" value=\"Refresh temperature\">"
     "</form>";
+// Resolution buttons
+char* resolutionControls =
+    "<h3>Change resolution</h3>"
+    "<form action=\"/res8\" method=\"get\">"
+    "<input type=\"submit\" value=\"8-bit (1 degree C steps)\">"
+    "</form>"
+    "<form action=\"/res10\" method=\"get\">"
+    "<input type=\"submit\" value=\"10-bit (0.25 degree C steps)\">"
+    "</form>"
+    "<form action=\"/res12\" method=\"get\">"
+    "<input type=\"submit\" value=\"12-bit (0.0625 degree C steps)\">"
+    "</form>"
+    "<p>The reading is the latest completed conversion. After changing resolution, wait 3 seconds, then press Refresh temperature.</p>";
 char* webpageEnd   = "</body></html>";
 
 //determines whether a given character sequence is in a char array request, returning 1 if present, -1 if not present
@@ -54,18 +65,20 @@ int updateLEDStatus(char request[])
 {
 	// Keep current LED state
 	int led_status = digitalRead(LED_PIN);
+	int i = 0;
+	while (request[i] != '\0' && request[i] != '?' && request[i] != '\n') {
+		i++;
+	}
+	request[i] = '\0';
 	// The request has been received. now process to determine whether to turn the LED on or off
-	// Codex: Match the complete route so another URL containing ledon cannot toggle the LED.
-	if (strcmp(request, "/REQ:ledoff\n") == 0 ||
-	    strcmp(request, "/REQ:'ledoff'\n") == 0) {
-		digitalWrite(LED_PIN, PIO_LOW);
-		led_status = 0;
-	}
-	else if (strcmp(request, "/REQ:ledon\n") == 0 ||
-	         strcmp(request, "/REQ:'ledon'\n") == 0) {
-		digitalWrite(LED_PIN, PIO_HIGH);
-		led_status = 1;
-	}
+	if (strcmp(request, "/REQ:ledoff") == 0) {
+    digitalWrite(LED_PIN, PIO_LOW);
+    led_status = 0;
+  }
+  else if (strcmp(request, "/REQ:ledon") == 0) {
+      digitalWrite(LED_PIN, PIO_HIGH);
+      led_status = 1;
+  }
 
 	return led_status;
 }
@@ -97,6 +110,8 @@ int main(void) {
   initDS1722();
   // Wait
   delay_millis(TIM15, 151);
+  // Initial resolution 8 bits
+  int resolution = 8;
 
   while(1) {
     /* Wait for ESP8266 to send a request.
@@ -132,6 +147,23 @@ int main(void) {
     // Request starts with /REQ
     if (strncmp(request, "/REQ:", 5) != 0) { continue; }
 
+    // Update string with current LED state
+
+    int led_status = updateLEDStatus(request);
+
+    int requestedResolution = resolution;
+    if (strcmp(request, "/REQ:res8") == 0) { requestedResolution = 8; }
+    else if (strcmp(request, "/REQ:res10") == 0) { requestedResolution = 10; }
+    else if (strcmp(request, "/REQ:res12") == 0) { requestedResolution = 12; }
+
+    if (requestedResolution != resolution) {
+      ds1722SetResolution(requestedResolution);
+      resolution = requestedResolution;
+    }
+
+    char resolutionStr[4];
+    snprintf(resolutionStr, sizeof(resolutionStr), "%d", resolution);
+
     // TODO: Add SPI code here for reading temperature
     // Read sensor
     int16_t rawTemperature = ds1722ReadRaw();
@@ -146,15 +178,11 @@ int main(void) {
 
     // Degrees and tenths
     int degrees = magnitude / 256; // 9 bit 2 complement
-    int tenths = (magnitude % 256) * 10 / 256;
+    int fraction = (magnitude % 256) * 10000 / 256;
     char temperatureStr[32];
     snprintf(temperatureStr, sizeof(temperatureStr),
-             "%s%d.%d", sign, degrees, tenths);
+             "%s%d.%04d", sign, degrees, fraction);
   
-    // Update string with current LED state
-  
-    int led_status = updateLEDStatus(request);
-
     char ledStatusStr[20];
     if (led_status == 1)
       sprintf(ledStatusStr,"LED is on!");
@@ -169,12 +197,19 @@ int main(void) {
     sendString(USART, temperatureStr);
     sendString(USART, " &deg;C</p>");
 
+
+    sendString(USART, "<h2>Resolution</h2><p>Selected resolution: ");
+    sendString(USART, resolutionStr);
+    sendString(USART, "-bit</p>");
+
     sendString(USART, "<h2>LED Status</h2>");
     sendString(USART, "<p>");
     sendString(USART, ledStatusStr);
     sendString(USART, "</p>");
 
     sendString(USART, ledStr); // button for controlling LED
+    // Resolution controls
+    sendString(USART, resolutionControls);
     // End tag
     sendString(USART, webpageEnd);
   }

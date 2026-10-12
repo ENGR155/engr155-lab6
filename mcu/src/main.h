@@ -8,7 +8,7 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-#include "STM32L432KC.h"
+#include "..\lib\STM32L432KC.h"
 
 #define LED_PIN PB3 // LED pin for blinking on Port B pin 3
 #define BUFF_LEN 32

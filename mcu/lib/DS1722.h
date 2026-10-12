@@ -12,4 +12,6 @@
 void initDS1722(void);
 // Read temp
 int16_t ds1722ReadRaw(void);
+// Change resolution
+void ds1722SetResolution(int bits);
 #endif

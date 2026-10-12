@@ -98,7 +98,6 @@ void sendChar(USART_TypeDef * USART, char data){
 
     while(!(USART->ISR & USART_ISR_TXE));
     USART->TDR = (uint8_t)data;
-    // Codex: Bit left TX pin
     while(!(USART->ISR & USART_ISR_TC));
 }
 
